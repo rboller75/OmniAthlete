@@ -31,16 +31,16 @@ CREATE TABLE daily_checkins (
     checkin_date DATE NOT NULL,
 
     sleep_quality INTEGER NOT NULL
-        CHECK (sleep_quality BETWEEN 1 AND 7),
+        CHECK (sleep_quality BETWEEN 1 AND 10),
 
     stress_level INTEGER NOT NULL
-        CHECK (stress_level BETWEEN 1 AND 7),
+        CHECK (stress_level BETWEEN 1 AND 10),
 
     fatigue_level INTEGER NOT NULL
-        CHECK (fatigue_level BETWEEN 1 AND 7),
+        CHECK (fatigue_level BETWEEN 1 AND 10),
 
     muscle_soreness INTEGER NOT NULL
-        CHECK (muscle_soreness BETWEEN 1 AND 7),
+        CHECK (muscle_soreness BETWEEN 1 AND 10),
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

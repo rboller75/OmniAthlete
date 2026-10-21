@@ -1,12 +1,12 @@
 import streamlit as st
+import pandas as pd
+
 from datetime import date
 from psycopg.errors import UniqueViolation
-
-from checkin import save_daily_checkin
-
+from checkin import save_daily_checkin, get_daily_checkins
 
 st.set_page_config(
-    page_title="OmniAthlete Daily Check-in",
+    page_title="OmniAthlete",
     page_icon="🏅",
     layout="centered"
 )
@@ -15,54 +15,68 @@ st.title("🏅 OmniAthlete")
 st.subheader("Daily Athlete Wellness Check-in")
 
 st.write(
-    "Record how you're feeling today. "
-    "Your responses will be saved to the OmniAthlete database."
+    "Record how you're feeling today and review "
+    "your recent wellness history."
 )
 
-st.caption(f"Check-in date: {date.today().strftime('%B %d, %Y')}")
+st.caption(
+    f"Check-in date: {date.today().strftime('%B %d, %Y')}"
+)
 
 st.info(
-    "Rate each area from 1 to 7. "
-    "Higher scores indicate better sleep quality, "
-    "but higher stress, fatigue, and soreness."
+    "Rate each area from 1 to 10. Higher sleep scores "
+    "mean better sleep. Higher stress, fatigue, and "
+    "soreness scores mean more difficulty in those areas."
 )
+
+# Temporary test athlete.
+# Replace this with the authenticated athlete's ID later.
+user_id = 3
+
+# -----------------------------
+# DAILY CHECK-IN FORM
+# -----------------------------
 
 with st.form("daily_checkin_form"):
 
     st.markdown("### Sleep Quality")
+
     sleep_quality = st.slider(
         "How would you rate your sleep?",
         min_value=1,
-        max_value=7,
-        value=4,
-        help="1 = Very poor sleep; 7 = Excellent sleep"
+        max_value=10,
+        value=5,
+        help="1 = Very poor sleep; 10 = Excellent sleep"
     )
 
     st.markdown("### Stress Level")
+
     stress_level = st.slider(
         "How stressed do you feel?",
         min_value=1,
-        max_value=7,
-        value=4,
-        help="1 = Very low stress; 7 = Very high stress"
+        max_value=10,
+        value=5,
+        help="1 = Very low stress; 10 = Very high stress"
     )
 
     st.markdown("### Fatigue Level")
+
     fatigue_level = st.slider(
-        "How physically or mentally tired do you feel?",
+        "How tired do you feel?",
         min_value=1,
-        max_value=7,
-        value=4,
-        help="1 = Very little fatigue; 7 = Extreme fatigue"
+        max_value=10,
+        value=5,
+        help="1 = Very little fatigue; 10 = Extreme fatigue"
     )
 
     st.markdown("### Muscle Soreness")
+
     muscle_soreness = st.slider(
         "How sore are your muscles?",
         min_value=1,
-        max_value=7,
-        value=4,
-        help="1 = No soreness; 7 = Severe soreness"
+        max_value=10,
+        value=5,
+        help="1 = No soreness; 10 = Severe soreness"
     )
 
     submitted = st.form_submit_button(
@@ -71,9 +85,6 @@ with st.form("daily_checkin_form"):
     )
 
 if submitted:
-    # Temporary test athlete.
-    # Replace this with the authenticated athlete's ID when login is built.
-    user_id = 3
 
     try:
         checkin_id = save_daily_checkin(
@@ -85,14 +96,88 @@ if submitted:
             muscle_soreness=muscle_soreness
         )
 
-        st.success("Your daily check-in was saved successfully!")
+        st.success("Your check-in was saved successfully!")
         st.write(f"Check-in reference: {checkin_id}")
 
     except UniqueViolation:
         st.warning(
-            "A check-in has already been submitted for this athlete today."
+            "A check-in has already been submitted "
+            "for this athlete today."
         )
 
     except Exception as error:
         st.error("The check-in could not be saved.")
         st.caption(f"Technical details: {error}")
+
+
+# -----------------------------
+# WELLNESS HISTORY DASHBOARD
+# -----------------------------
+
+st.divider()
+
+st.header("Wellness History")
+
+st.write(
+    "Review recent check-ins and look for changes "
+    "in your wellness ratings."
+)
+
+try:
+    records = get_daily_checkins(user_id=user_id, limit=30)
+
+    if records:
+
+        columns = [
+            "Check-in Date",
+            "Sleep Quality",
+            "Stress Level",
+            "Fatigue Level",
+            "Muscle Soreness"
+        ]
+
+        history = pd.DataFrame(
+            records,
+            columns=columns
+        )
+
+        # Show the newest check-ins first.
+        st.dataframe(
+            history,
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.subheader("Wellness Trends")
+
+        # Charts display dates from oldest to newest.
+        chart_data = history.sort_values("Check-in Date")
+
+        chart_data = chart_data.set_index("Check-in Date")
+
+        st.line_chart(
+            chart_data[
+                [
+                    "Sleep Quality",
+                    "Stress Level",
+                    "Fatigue Level",
+                    "Muscle Soreness"
+                ]
+            ]
+        )
+
+        st.caption(
+            "Interpret the ratings separately: higher sleep "
+            "scores are favorable, while higher stress, fatigue, "
+            "and soreness scores indicate greater difficulty. "
+            "These are wellness trends, not a medical diagnosis."
+        )
+
+    else:
+        st.info(
+            "No check-in history is available for this athlete yet."
+        )
+
+except Exception as error:
+    st.error("Unable to load wellness history.")
+    st.caption(f"Technical details: {error}")

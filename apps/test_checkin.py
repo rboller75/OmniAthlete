@@ -1,5 +1,6 @@
 from datetime import date
 from checkin import save_daily_checkin
+from checkin import get_daily_checkins
 
 
 try:
@@ -17,4 +18,18 @@ try:
 
 except Exception as error:
     print("Daily check-in failed:")
+    print(error)
+
+print("\nTesting check-in history:")
+
+try:
+    records = get_daily_checkins(user_id=1)
+
+    print(f"Records found: {len(records)}")
+
+    for record in records:
+        print(record)
+
+except Exception as error:
+    print("Could not retrieve check-in history:")
     print(error)

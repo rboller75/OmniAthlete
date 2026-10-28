@@ -97,3 +97,31 @@ def get_daily_checkins(user_id, limit=30):
 
     finally:
         connection.close()
+
+
+def get_burnout_assessments(user_id, limit=10):
+    """Retrieve recent burnout assessments for one athlete."""
+    connection = get_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            query = """
+                SELECT
+                    assessment_date,
+                    exhaustion_score,
+                    reduced_accomplishment_score,
+                    sport_devaluation_score,
+                    overall_burnout_score
+                FROM burnout_assessments
+                WHERE user_id = %s
+                ORDER BY assessment_date DESC
+                LIMIT %s;
+            """
+
+            cursor.execute(query, (user_id, limit))
+            records = cursor.fetchall()
+
+        return records
+
+    finally:
+        connection.close()

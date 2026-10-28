@@ -3,7 +3,7 @@ import pandas as pd
 
 from datetime import date
 from psycopg.errors import UniqueViolation
-from checkin import save_daily_checkin, get_daily_checkins
+from checkin import (save_daily_checkin, get_daily_checkins, get_burnout_assessments)
 
 st.set_page_config(
     page_title="OmniAthlete",
@@ -31,7 +31,7 @@ st.info(
 
 # Temporary test athlete.
 # Replace this with the authenticated athlete's ID later.
-user_id = 3
+user_id = 1
 
 # -----------------------------
 # DAILY CHECK-IN FORM
@@ -180,4 +180,54 @@ try:
 
 except Exception as error:
     st.error("Unable to load wellness history.")
+    st.caption(f"Technical details: {error}")
+
+
+# -----------------------------
+# BURNOUT ASSESSMENT HISTORY
+# -----------------------------
+
+st.divider()
+
+st.header("Athlete Burnout Questionnaire (ABQ)")
+
+st.write(
+    "Review previously recorded burnout assessments. "
+    "These results are separate from daily wellness ratings."
+)
+
+try:
+    assessments = get_burnout_assessments(
+        user_id=user_id,
+        limit=10
+    )
+
+    if assessments:
+        abq_columns = [
+            "Assessment Date",
+            "Exhaustion Score",
+            "Reduced Accomplishment Score",
+            "Sport Devaluation Score",
+            "Overall Burnout Score"
+        ]
+
+        abq_history = pd.DataFrame(
+            assessments,
+            columns=abq_columns
+        )
+
+        st.dataframe(
+            abq_history,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    else:
+        st.info(
+            "No burnout assessments have been recorded "
+            "for this athlete yet."
+        )
+
+except Exception as error:
+    st.error("Unable to load burnout assessment history.")
     st.caption(f"Technical details: {error}")

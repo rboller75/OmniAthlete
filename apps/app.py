@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import date
 from psycopg.errors import UniqueViolation
 from checkin import (save_daily_checkin, get_daily_checkins, get_burnout_assessments)
+from risk import (evaluate_wellness_risk, get_latest_checkin, save_risk_alert)
 
 st.set_page_config(
     page_title="OmniAthlete",
@@ -109,6 +110,73 @@ if submitted:
         st.error("The check-in could not be saved.")
         st.caption(f"Technical details: {error}")
 
+# -----------------------------
+# CURRENT WELLNESS RISK STATUS
+# -----------------------------
+
+st.divider()
+
+st.header("Athlete Wellness Risk Status")
+
+try:
+    latest_checkin = get_latest_checkin(user_id)
+
+    if latest_checkin is None:
+
+        st.info(
+            "No daily check-in is available to evaluate."
+        )
+
+    else:
+        (
+            checkin_id,
+            checkin_date,
+            sleep_quality,
+            stress_level,
+            fatigue_level,
+            muscle_soreness
+        ) = latest_checkin
+
+        risk_level, reason = evaluate_wellness_risk(
+            sleep_quality,
+            stress_level,
+            fatigue_level,
+            muscle_soreness
+        )
+
+        save_risk_alert(
+            user_id=user_id,
+            checkin_id=checkin_id,
+            alert_date=checkin_date,
+            risk_level=risk_level,
+            reason=reason
+        )
+
+        if risk_level == "green":
+
+            st.success("GREEN — Low Wellness Concern")
+
+        elif risk_level == "yellow":
+
+            st.warning("YELLOW — Moderate Wellness Concern")
+
+        else:
+
+            st.error("RED — Elevated Wellness Concern")
+
+        st.write(f"**Assessment date:** {checkin_date}")
+        st.write(f"**Reason:** {reason}")
+
+        st.caption(
+            "This preliminary wellness alert is based on "
+            "daily check-in thresholds. It is not a medical "
+            "diagnosis or a validated burnout prediction."
+        )
+
+except Exception as error:
+
+    st.error("Unable to calculate the wellness risk status.")
+    st.caption(f"Technical details: {error}")
 
 # -----------------------------
 # WELLNESS HISTORY DASHBOARD

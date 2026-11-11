@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 
 from datetime import date
+from abq import (calculate_abq_scores, save_burnout_assessment)
 from psycopg.errors import UniqueViolation
 from checkin import (save_daily_checkin, get_daily_checkins, get_burnout_assessments)
 from risk import (evaluate_wellness_risk, get_latest_checkin, save_risk_alert)
@@ -251,6 +252,125 @@ except Exception as error:
     st.caption(f"Technical details: {error}")
 
 
+# -----------------------------
+# ABQ ASSESSMENT FORM
+# -----------------------------
+
+st.divider()
+
+st.header("Complete Athlete Burnout Questionnaire")
+
+st.write(
+    "Complete all 15 questions using the response "
+    "options provided. This assessment is separate "
+    "from your daily wellness check-in."
+)
+
+# Replace each placeholder with the corresponding
+# authorized ABQ question wording.
+abq_questions = {
+    1: "Enter authorized ABQ item 1 wording",
+    2: "Enter authorized ABQ item 2 wording",
+    3: "Enter authorized ABQ item 3 wording",
+    4: "Enter authorized ABQ item 4 wording",
+    5: "Enter authorized ABQ item 5 wording",
+    6: "Enter authorized ABQ item 6 wording",
+    7: "Enter authorized ABQ item 7 wording",
+    8: "Enter authorized ABQ item 8 wording",
+    9: "Enter authorized ABQ item 9 wording",
+    10: "Enter authorized ABQ item 10 wording",
+    11: "Enter authorized ABQ item 11 wording",
+    12: "Enter authorized ABQ item 12 wording",
+    13: "Enter authorized ABQ item 13 wording",
+    14: "Enter authorized ABQ item 14 wording",
+    15: "Enter authorized ABQ item 15 wording"
+}
+
+response_options = {
+    1: "1 - Almost Never",
+    2: "2 - Rarely",
+    3: "3 - Sometimes",
+    4: "4 - Frequently",
+    5: "5 - Almost Always"
+}
+
+with st.form("abq_assessment_form"):
+
+    st.caption(
+        "Respond to every item using the five-point "
+        "response scale."
+    )
+
+    answers = {}
+
+    for item_number, question in abq_questions.items():
+
+        st.markdown(f"**Question {item_number}**")
+
+        answers[item_number] = st.radio(
+            question,
+            options=list(response_options.keys()),
+            format_func=lambda value: response_options[value],
+            key=f"abq_item_{item_number}"
+        )
+
+    abq_submitted = st.form_submit_button(
+        "Submit ABQ Assessment",
+        use_container_width=True
+    )
+
+if abq_submitted:
+
+    try:
+        scores = calculate_abq_scores(answers)
+
+        assessment_id = save_burnout_assessment(
+            user_id=user_id,
+            assessment_date=date.today(),
+            responses=answers,
+            exhaustion_score=scores["exhaustion_score"],
+            reduced_accomplishment_score=scores[
+                "reduced_accomplishment_score"
+            ],
+            sport_devaluation_score=scores[
+                "sport_devaluation_score"
+            ],
+            overall_burnout_score=scores[
+                "overall_burnout_score"
+            ]
+        )
+
+        st.success("ABQ assessment saved successfully!")
+
+        st.write(f"Assessment reference: {assessment_id}")
+
+        st.subheader("Your ABQ Results")
+
+        st.metric(
+            "Physical/Emotional Exhaustion",
+            f"{scores['exhaustion_score']:.2f} / 5"
+        )
+
+        st.metric(
+            "Reduced Sense of Accomplishment",
+            f"{scores['reduced_accomplishment_score']:.2f} / 5"
+        )
+
+        st.metric(
+            "Sport Devaluation",
+            f"{scores['sport_devaluation_score']:.2f} / 5"
+        )
+
+        st.metric(
+            "Overall ABQ Score",
+            f"{scores['overall_burnout_score']:.2f} / 5"
+        )
+
+    except Exception as error:
+
+        st.error("The ABQ assessment could not be saved.")
+        st.caption(f"Technical details: {error}")
+        
 # -----------------------------
 # BURNOUT ASSESSMENT HISTORY
 # -----------------------------
